@@ -1,64 +1,123 @@
-<html>
-  <body align="center">
-    <div>Object Detection Game</div>
-    <button type="button" onclick="startGame()">Start Game</button>
-    <div id="timer-container"></div>
-    <div id="score-container"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Object Detection Game 2</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="scoreboard">
+        <div class="score-title">Score:</div>
+        <div class="score" id="score">0</div>
+        <div class="timer-title">Time:</div>
+        <div class="timer" id="timer">60</div>
+      </div>
+      <div id="webcam-container"></div>
+      <div id="label-container"></div>
+      <div class="start-button" id="start-button">Start</div>
+    </div>
+
     <script type="text/javascript">
-      const URL = "https://teachablemachine.withgoogle.com/models/fhATAqKV1/";
-      const maxPredictions = 10;
-      let model, webcam, score, timer;
 
-      async function startGame() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+// the link to your model provided by Teachable Machine export panel
+const URL = "https://teachablemachine.withgoogle.com/models/fhATAqKV1/";
 
-        model = await tmImage.load(modelURL, metadataURL);
-        score = 0;
-        timer = 60;
-        document.getElementById("score-container").innerHTML = `Score: ${score}`;
+let model, webcam, labelContainer, maxPredictions;
+let score = 0;
+let lastPrediction = "";
+let timerInterval;
 
-        const flip = true;
-        webcam = new tmImage.Webcam(200, 200, flip);
-        await webcam.setup();
-        await webcam.play();
-        window.requestAnimationFrame(loop);
+// Load the image model and setup the webcam
+async function init() {
+  const modelURL = URL + "model.json";
+  const metadataURL = URL + "metadata.json";
 
-        const timerInterval = setInterval(() => {
-          timer--;
-          document.getElementById("timer-container").innerHTML = `Time: ${timer}s`;
-          if (timer === 0) {
-            clearInterval(timerInterval);
-            endGame();
-          }
-        }, 1000);
-      }
+  // load the model and metadata
+  model = await tmImage.load(modelURL, metadataURL);
+  maxPredictions = model.getTotalClasses();
 
-      async function loop() {
-        webcam.update();
-        const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-          const className = prediction[i].className;
-          const probability = prediction[i].probability.toFixed(2);
-          if (probability >= 0.6 && className !== "background") {
-            score++;
-            document.getElementById("score-container").innerHTML = `Score: ${score}`;
-            await sleep(1000); // prevent multiple detections of same object
-          }
-        }
-        window.requestAnimationFrame(loop);
-      }
+  // Convenience function to setup a webcam
+  const flip = true; // whether to flip the webcam
+  webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+  await webcam.setup(); // request access to the webcam
+  await webcam.play();
+  window.requestAnimationFrame(loop);
 
-      function endGame() {
-        webcam.stop();
-        alert(`Game Over! Your score is ${score}`);
-      }
+  // append elements to the DOM
+  document.getElementById("webcam-container").appendChild(webcam.canvas);
+  labelContainer = document.getElementById("label-container");
+  for (let i = 0; i < maxPredictions; i++) { // and class labels
+    labelContainer.appendChild(document.createElement("div"));
+  }
 
-      function sleep(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-      }
-    </script>
+  // start the game timer
+  startTimer();
+}
+
+async function loop() {
+  webcam.update(); // update the webcam frame
+  await predict();
+  window.requestAnimationFrame(loop);
+}
+
+// run the webcam image through the image model
+async function predict() {
+  // predict can take in an image, video or canvas html element
+  const prediction = await model.predict(webcam.canvas);
+
+  // find the class with the highest probability
+  let maxPrediction = "";
+  let maxProbability = 0;
+  for (let i = 0; i < maxPredictions; i++) {
+    if (prediction[i].probability > maxProbability && prediction[i].className !== "background") {
+      maxPrediction = prediction[i].className;
+      maxProbability = prediction[i].probability;
+    }
+  }
+
+  // check if the current prediction is different from the last one and has a high enough probability
+  if (maxPrediction !== lastPrediction && maxProbability >= 0.6) {
+    // check if the predicted class has not been detected before
+    if (!document.getElementById(maxPrediction)) {
+      // add the predicted class to the list of detected classes
+      const element = document.createElement("div");
+      element.id = maxPrediction;
+      element.textContent = maxPrediction;
+      document.getElementById("detected-container").appendChild(element);
+
+      // increase the score and update the score display
+      score++;
+      document.getElementById("score").textContent = "Score: " + score;
+
+      // remember the last prediction
+      lastPrediction = maxPrediction;
+    }
+  }
+}
+
+// start the game timer
+function startTimer() {
+  const startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById("timer").textContent = "Time: " + elapsedSeconds + "s";
+
+    // end the game if 10 items have been detected
+    if (score >= 10) {
+      clearInterval(timerInterval);
+      alert("You win! Your time: " + elapsedSeconds + "s");
+    }
+  }, 1000);
+}
+
+init();
+
+
+
+</script>
   </body>
 </html>
