@@ -1,123 +1,183 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Object Detection Game 2</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Computer Vision Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <style>
+        /* Center all content */
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Highlight the timer */
+#timer {
+  font-size: 32px;
+  font-weight: bold;
+  color: red;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Highlight the score */
+#score-container {
+  font-size: 32px;
+  font-weight: bold;
+  color: green;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Style the item labels */
+.label-container {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Style the score labels */
+.score-label {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Style the score values */
+.score-value {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-size: 24px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #3e8e41;
+}
+h1 {
+  text-align: center;
+  margin: 0;
+}
+
+    </style>
   </head>
   <body>
-    <div class="container">
-      <div class="scoreboard">
-        <div class="score-title">Score:</div>
-        <div class="score" id="score">0</div>
-        <div class="timer-title">Time:</div>
-        <div class="timer" id="timer">60</div>
-      </div>
-      <div id="webcam-container"></div>
-      <div id="label-container"></div>
-      <div class="start-button" id="start-button">Start</div>
-    </div>
-
+    <h1>Computer Vision Game</h1>
+    <h4>Developed for the workshop, "From Pixels to Prediction, Creating Image Recognition Models"</h4>
+    <h6>by AJIN K J</h6>
+    <button type="button" onclick="startGame()">Start</button><br>
+    <div id="webcam-container"></div>
+    <div id="timer">3:00</div>
+    <div id="score-container">Score: 0</div>
+    <div id="label-container"></div>
     <script type="text/javascript">
+        let timerCountdown = 180; // 3 minutes in seconds
+let timerElement = document.getElementById("timer");
+let countdownInterval;
 
-// the link to your model provided by Teachable Machine export panel
-const URL = "https://teachablemachine.withgoogle.com/models/fhATAqKV1/";
-
-let model, webcam, labelContainer, maxPredictions;
-let score = 0;
-let lastPrediction = "";
-let timerInterval;
-
-// Load the image model and setup the webcam
-async function init() {
-  const modelURL = URL + "model.json";
-  const metadataURL = URL + "metadata.json";
-
-  // load the model and metadata
-  model = await tmImage.load(modelURL, metadataURL);
-  maxPredictions = model.getTotalClasses();
-
-  // Convenience function to setup a webcam
-  const flip = true; // whether to flip the webcam
-  webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-  await webcam.setup(); // request access to the webcam
-  await webcam.play();
-  window.requestAnimationFrame(loop);
-
-  // append elements to the DOM
-  document.getElementById("webcam-container").appendChild(webcam.canvas);
-  labelContainer = document.getElementById("label-container");
-  for (let i = 0; i < maxPredictions; i++) { // and class labels
-    labelContainer.appendChild(document.createElement("div"));
-  }
-
-  // start the game timer
-  startTimer();
-}
-
-async function loop() {
-  webcam.update(); // update the webcam frame
-  await predict();
-  window.requestAnimationFrame(loop);
-}
-
-// run the webcam image through the image model
-async function predict() {
-  // predict can take in an image, video or canvas html element
-  const prediction = await model.predict(webcam.canvas);
-
-  // find the class with the highest probability
-  let maxPrediction = "";
-  let maxProbability = 0;
-  for (let i = 0; i < maxPredictions; i++) {
-    if (prediction[i].probability > maxProbability && prediction[i].className !== "background") {
-      maxPrediction = prediction[i].className;
-      maxProbability = prediction[i].probability;
-    }
-  }
-
-  // check if the current prediction is different from the last one and has a high enough probability
-  if (maxPrediction !== lastPrediction && maxProbability >= 0.6) {
-    // check if the predicted class has not been detected before
-    if (!document.getElementById(maxPrediction)) {
-      // add the predicted class to the list of detected classes
-      const element = document.createElement("div");
-      element.id = maxPrediction;
-      element.textContent = maxPrediction;
-      document.getElementById("detected-container").appendChild(element);
-
-      // increase the score and update the score display
-      score++;
-      document.getElementById("score").textContent = "Score: " + score;
-
-      // remember the last prediction
-      lastPrediction = maxPrediction;
-    }
-  }
-}
-
-// start the game timer
 function startTimer() {
-  const startTime = Date.now();
-  timerInterval = setInterval(() => {
-    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById("timer").textContent = "Time: " + elapsedSeconds + "s";
-
-    // end the game if 10 items have been detected
-    if (score >= 10) {
-      clearInterval(timerInterval);
-      alert("You win! Your time: " + elapsedSeconds + "s");
+  countdownInterval = setInterval(() => {
+    timerCountdown--;
+    let minutes = Math.floor(timerCountdown / 60);
+    let seconds = timerCountdown % 60;
+    let formattedTime = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    timerElement.textContent = formattedTime;
+    if (timerCountdown === 0) {
+      clearInterval(countdownInterval);
+      endGame();
     }
   }, 1000);
 }
 
-init();
+function resetTimer() {
+  clearInterval(countdownInterval);
+  timerCountdown = 180;
+  timerElement.textContent = "3:00";
+}
 
+      const URL = "https://teachablemachine.withgoogle.com/models/atG2h9pcx/";
+      let model, webcam, labelContainer, maxPredictions, score = 0, seenItems = new Set();
 
+      async function startGame() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
 
-</script>
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        const flip = true;
+        webcam = new tmImage.Webcam(200, 200, flip);
+        await webcam.setup();
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) {
+          labelContainer.appendChild(document.createElement("div"));
+        }
+        document.getElementById("score-container").innerHTML = "Score: " + score;
+        startTimer();
+      }
+
+      async function loop() {
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
+      }
+
+      async function predict() {
+        const prediction = await model.predict(webcam.canvas);
+        let foundNewObject = false;
+        for (let i = 0; i < maxPredictions; i++) {
+          const classPrediction = prediction[i].className;
+          const probability = prediction[i].probability.toFixed(2);
+          labelContainer.childNodes[i].innerHTML = classPrediction + ": " + probability;
+          if (probability > 0.7 && !seenItems.has(classPrediction)) {
+            score++;
+            seenItems.add(classPrediction);
+            foundNewObject = true;
+          }
+        }
+        if (foundNewObject) {
+          document.getElementById("score-container").innerHTML = "Score: " + score;
+        }
+      }
+
+      function updateScore() {
+        document.getElementById("score-container").innerHTML = "Score: " + score;
+      }
+
+      function endGame() {
+        webcam.stop();
+        alert("Game Over! Final score: " + score);
+      }
+
+      
+    </script>
+    <footer>
+        Instructions:<ul>
+            <li>We have trained a ML model, which can identify certain objects.</li>
+            <li>You will have 3 minutes time to identify all the objects.</li>
+            <li>The person to score the highest will win the game.</li>
+            <li>To start the game click on start button. The game will continue for 3 minutes.</li>
+            <li>After 3 minutes the game will automatically end.</li>
+            <li>If you refresh the screen, the game restart and you loss your current score.</li>
+            <li>Once time up, your final score will be displayed, it's better to take a screenshot of that.</li>
+        </ul>
+        <h1>All the best!</h1>
+    </footer>
   </body>
 </html>
