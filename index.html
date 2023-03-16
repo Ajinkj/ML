@@ -79,11 +79,11 @@ h1 {
     <h6>by AJIN K J</h6>
     <button type="button" onclick="startGame()">Start</button><br>
     <div id="webcam-container"></div>
-    <div id="timer">5:00</div>
+    <div id="timer">3:00</div>
     <div id="score-container">Score: 0</div>
     <div id="label-container"></div>
     <script type="text/javascript">
-        let timerCountdown = 300; // 3 minutes in seconds
+        let timerCountdown = 180; // 3 minutes in seconds
 let timerElement = document.getElementById("timer");
 let countdownInterval;
 
@@ -103,8 +103,8 @@ function startTimer() {
 
 function resetTimer() {
   clearInterval(countdownInterval);
-  timerCountdown = 300;
-  timerElement.textContent = "5:00";
+  timerCountdown = 180;
+  timerElement.textContent = "3:00";
 }
 
       const URL = "https://teachablemachine.withgoogle.com/models/zn8LQBwcN/";
