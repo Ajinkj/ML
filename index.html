@@ -103,8 +103,8 @@ function startTimer() {
 
 function resetTimer() {
   clearInterval(countdownInterval);
-  timerCountdown = 180;
-  timerElement.textContent = "3:00";
+  timerCountdown = 300;
+  timerElement.textContent = "5:00";
 }
 
       const URL = "https://teachablemachine.withgoogle.com/models/zn8LQBwcN/";
@@ -145,7 +145,7 @@ function resetTimer() {
           const classPrediction = prediction[i].className;
           const probability = prediction[i].probability.toFixed(2);
           labelContainer.childNodes[i].innerHTML = classPrediction + ": " + probability;
-          if (probability > 0.7 && !seenItems.has(classPrediction)) {
+          if (probability > 0.9 && !seenItems.has(classPrediction)) {
             score++;
             seenItems.add(classPrediction);
             foundNewObject = true;
